@@ -1,29 +1,39 @@
 library(RTextTools)
-library(plyr)
+library(readr)
+library(stringr)
 library(dplyr)
 library(beepr)
 
-coded <- c(1, 116, 303, 352, 368, 421, 494, 603, 636, 711, 834, 864, 1141, 1239, 1292, 1361, 1650, 1772)
+prot <- read_csv("data-raw/protestas.csv")
+names(prot) <- names(prot) %>%
+    tolower() %>% 
+    make.names() %>% 
+    str_replace_all("\\.", "_")
 
-for (i in 1:length(coded)) {
-    dat <- read.csv(paste0("Training/",coded[i],".csv"), stringsAsFactors=F)
-    dat <- dat[, c("text", "protest")]
-    dat$file <- coded[i]
-    if (i==1) data <- dat else data <- rbind(data, dat)
-}
+mass_protests <- c("Actos sobre la propiedad",
+                   "Bloqueo",
+                   "Huelga",
+                   "Marcha",
+                   "Mitin o concentración",
+                   "Paro",
+                   "Toma de propiedad")
 
-data <- left_join(data, meta)
+prot <- prot %>%
+    mutate(mass = if_else(tipo_de_protesta %in% mass_protests,
+                          1, 0))
+
 
 set.seed(324)
-data <- data[sample(1:nrow(data), size=nrow(data), replace=FALSE), ]
+prot1 <- sample_n(prot, size=nrow(prot), replace=FALSE)
+
 
 ptm <- proc.time()
 ptm
-matrix <- create_matrix(cbind(data["text"], data["country"]), language="spanish",
+matrix <- create_matrix(prot1$resumen, language="spanish",
                         removeNumbers=TRUE, stemWords=FALSE, weighting=tm::weightTfIdf)
-#container <- create_container(matrix, data$protest, trainSize=1:round(.75*dim(data)[1]), testSize=(round(.75*dim(data)[1])+1):dim(data)[1], virgin=FALSE)
-container <- create_container(matrix, data$protest, trainSize=1:dim(data)[1], virgin=FALSE) #train using all data (no reserved test set)
-models <- train_models(container, algorithms=c("SVM","GLMNET","MAXENT", "SLDA","BOOSTING","BAGGING","RF","TREE")) #Also NNET
+container <- create_container(matrix, prot1$mass, trainSize=1:round(.75*dim(prot1)[1]), testSize=(round(.75*dim(prot1)[1])+1):dim(prot1)[1], virgin=FALSE)
+#container <- create_container(matrix, data$protest, trainSize=1:dim(data)[1], virgin=FALSE) #train using all data (no reserved test set)
+models <- train_models(container, algorithms=c("SVM","GLMNET","MAXENT", "SLDA","BOOSTING","BAGGING","RF","TREE", "NNET")) #Also NNET
 #models <- train_models(container, algorithms=c("SVM","GLMNET","MAXENT"))
 results <- classify_models(container, models)
 analytics <- create_analytics(container, results)
