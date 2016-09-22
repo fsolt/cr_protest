@@ -1,19 +1,8 @@
-library(readr)
 library(dplyr)
 library(stringr)
 library(rvest)
 library(tidyr)
 library(purrr)
-
-# get training file
-cr <- read_csv("http://www.protestas.iis.ucr.ac.cr/protestas.csv")
-write_csv(cr, "data-raw/protestas.csv")
-
-cr <- read_csv("data-raw/protestas.csv")
-names(cr) <- names(cr) %>%
-    tolower() %>% 
-    make.names() %>% 
-    str_replace_all("\\.", "_")
 
 # get PDF reports -------------------
 # find number of last page of reports

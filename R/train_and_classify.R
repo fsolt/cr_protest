@@ -2,25 +2,8 @@ library(RTextTools)
 library(readr)
 library(stringr)
 library(dplyr)
+library(purrr)
 library(beepr)
-
-prot <- read_csv("data-raw/protestas.csv")
-names(prot) <- names(prot) %>%
-    tolower() %>% 
-    make.names() %>% 
-    str_replace_all("\\.", "_")
-
-mass_protests <- c("Actos sobre la propiedad",
-                   "Bloqueo",
-                   "Huelga",
-                   "Marcha",
-                   "Mitin o concentración",
-                   "Paro",
-                   "Toma de propiedad")
-
-prot <- prot %>%
-    mutate(mass = if_else(tipo_de_protesta %in% mass_protests,
-                          1, 0))
 
 
 set.seed(324)
@@ -29,16 +12,28 @@ prot1 <- sample_n(prot, size=nrow(prot), replace=FALSE)
 
 ptm <- proc.time()
 ptm
-matrix <- create_matrix(prot1$resumen, language="spanish",
-                        removeNumbers=TRUE, stemWords=FALSE, weighting=tm::weightTfIdf)
-container <- create_container(matrix, prot1$mass, trainSize=1:round(.75*dim(prot1)[1]), testSize=(round(.75*dim(prot1)[1])+1):dim(prot1)[1], virgin=FALSE)
-#container <- create_container(matrix, data$protest, trainSize=1:dim(data)[1], virgin=FALSE) #train using all data (no reserved test set)
-models <- train_models(container, algorithms=c("SVM","GLMNET","MAXENT", "SLDA","BOOSTING","BAGGING","RF","TREE", "NNET")) #Also NNET
-#models <- train_models(container, algorithms=c("SVM","GLMNET","MAXENT"))
-results <- classify_models(container, models)
-analytics <- create_analytics(container, results)
 
-summary(analytics)
+f <- .5
+#frac <- seq(.1, 1, by = .1)
+#analytics_by_size <- map(frac, function(f) {
+    matrix <- create_matrix(c(bind(prot1$provincia, prot1$resumen),
+                              language="spanish",
+                              removeNumbers=TRUE, 
+                              stemWords=FALSE, 
+                              weighting=tm::weightTfIdf)
+    container <- create_container(matrix, 
+                                  prot1$mass, 
+                                  trainSize=1:round(f*dim(prot1)[1]),
+                                  testSize=(round(f*dim(prot1)[1])+1):dim(prot1)[1],
+                                  virgin=FALSE)
+    #container <- create_container(matrix, data$protest, trainSize=1:dim(data)[1], virgin=FALSE) #train using all data (no reserved test set)
+    #models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT", "SLDA", "BOOSTING", "BAGGING", "RF", "TREE")) #Also NNET
+    models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT"))
+    results <- classify_models(container, models)
+    analytics <- create_analytics(container, results)
+    summary(analytics)
+#})
+
 proc.time()
 (proc.time() - ptm)/60
 beep()
@@ -49,8 +44,8 @@ beep()
 
 
 
-# save(matrix,file="originalMatrix.Rd")
-# save(models1,file="trainedModels.Rd")
+# save(matrix, file="originalMatrix.Rd")
+# save(models1, file="trainedModels.Rd")
 
 # load("originalMatrix.Rd")
 # load("trainedModels.Rd")
