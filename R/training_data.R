@@ -30,18 +30,21 @@ prot <- prot0 %>%
                           true = 1,
                           false = 0),
            sub_tipo_de_protesta = if_else(is.na(sub_tipo_de_protesta), "ninguno", sub_tipo_de_protesta),
-           mass = if_else(str_detect(resumen, "bloque\\B") &
+           mass = if_else(str_detect(resumen, "(?<!no )bloque\\B") &
                               !str_detect(resumen, "(Uber|importaciones|FIV)") &
                               sub_tipo_de_protesta!="Amenaza",
                           true = 1,
                           false = mass),
-           mass = if_else(str_detect(resumen, "se concentra"),
+           mass = if_else(str_detect(resumen, "se concentra|[Cc]on una concentración"),
                           true = 1,
                           false = mass),
            mass = if_else(str_detect(resumen, "((realizan?|inician?) una?|(declaran?|mantienen?) en) (paro|huelga)"),
                           true = 1,
                           false = mass),
            mass = if_else(str_detect(resumen, "mantienen? ocupando"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "[Ll]uego de la manifestación"),
                           true = 1,
                           false = mass),
            prot_number = min_rank(resumen)) %>% 
