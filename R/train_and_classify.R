@@ -1,10 +1,6 @@
+library(tidyverse)
 library(RTextTools)
-library(readr)
-library(stringr)
-library(dplyr)
-library(purrr)
 library(beepr)
-
 
 set.seed(324)
 prot1 <- sample_n(prot, size=nrow(prot), replace=FALSE)
@@ -16,7 +12,7 @@ ptm
 f <- .5
 #frac <- seq(.1, 1, by = .1)
 #analytics_by_size <- map(frac, function(f) {
-    matrix <- create_matrix(c(bind(prot1$provincia, prot1$resumen),
+    matrix <- create_matrix(prot1$resumen,
                               language="spanish",
                               removeNumbers=TRUE, 
                               stemWords=FALSE, 
@@ -34,6 +30,12 @@ f <- .5
     summary(analytics)
 #})
 
+tested <- prot1[(round(f*dim(prot1)[1])+1):dim(prot1)[1], ] %>% 
+    cbind(analytics@document_summary)
+
+fp <- tested %>% filter(CONSENSUS_CODE==1 & mass==0)
+fn <- tested %>% filter(CONSENSUS_CODE==0 & mass==1)
+    
 proc.time()
 (proc.time() - ptm)/60
 beep()
