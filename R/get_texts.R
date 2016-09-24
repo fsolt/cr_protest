@@ -4,6 +4,8 @@ library(rvest)
 library(tidyr)
 library(purrr)
 
+# depends on poppler (on Macs, install via Homebrew: `brew install poppler`)
+
 # get PDF reports -------------------
 # find number of last page of reports
 last_page <- read_html("http://www.protestas.iis.ucr.ac.cr/publicaciones/cronologias") %>% 
@@ -89,17 +91,12 @@ walk2(old_links, old_names, function(link, name) {
 # make texts directory, if it doesn't already exist
 dir.create("data-raw/texts", showWarnings = FALSE) 
 
-# get pdfbox-app if not already present
-if (!file.exists("pdfbox-app-2.0.3.jar")) {
-    download.file("http://www.webhostingjams.com/mirror/apache/pdfbox/2.0.3/pdfbox-app-2.0.3.jar", "pdfbox-app-2.0.3.jar")
-}
-
 all_reports <- c(report_names, old_names)
 
 # extract text from PDFs
 walk(all_reports, function(name) {
     if (!file.exists(str_c("data-raw/texts/", name, ".txt"))) { # if text doesn't exist
-        str_c("java -jar pdfbox-app-2.0.3.jar ExtractText \"data-raw/files/", 
+        str_c("pdftotext -layout \"data-raw/files/", 
                      name, ".pdf\" \"data-raw/texts/", name,".txt\"") %>% 
             system(ignore.stderr = TRUE)
     }
