@@ -27,8 +27,8 @@ días <- c("Domingo", "Lunes", "Martes", "Miércoles", "Miercoles", "Jueves", "V
 meses <- c("Enero", "Febrero", "Marzo", "Mayo", "Abril", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
 #gsub(paste0("\\n((?:", paste(days, collapse="|"), ")[[:blank:]]*[0-9]{1,2})\\n"), "\n\n\\1\n\n",  t, ignore.case=T)
 
-t <- texts[[70]] %>% 
-    # two-year-old pre-stringr code; sorry its (extra-)hard to read 
+t <- texts[[86]] %>% 
+    # two-year-old pre-stringr code; sorry it's (extra-)hard to read 
     # Add extra line breaks around days
     gsub(paste0("\\n((?:", paste(días, collapse="|"), ")[[:blank:]]*[0-9]{1,2})\\n"),
          "\n\n\\1\n\n",  ., ignore.case=T) %>%
@@ -40,9 +40,9 @@ t <- texts[[70]] %>%
     gsub("([^\n]{70,}\\.)\\n([[:upper:]]|“)", "\\1 \\2", .) %>% 
     # Omit lines with just page numbers
     gsub("\\n+\\s*\\d+\\s*\\n+", "\\\n", .) %>% 
-    # Omit lines with headers
+    # Omit lines with headers or cite-to footnote
     gsub("\\n[^\n]*(Cronolog|OSAL|Osal|IIS)[^\n]*\\n", "\\\n", .) %>% 
-    str_replace("\\nSocial[^\n]*\\nhttp://iis.ucr.ac.cr/[^\n]*\\n", "") %>% 
+    str_replace("\\n(\\s*Protesta\\s*)?Social[^\n]*\\n\\s*http://iis.ucr.ac.cr/[^\n]*\\n", "") %>% 
     # Omit line breaks within sentences
     gsub("([][:alpha:]),;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“«\"$])", "\\1 \\2", .) %>% 
     # Omit line breaks at numbers within sentences
