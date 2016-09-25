@@ -83,14 +83,13 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         filter(!(is.na(día_fecha) |
                      día_fecha=="Glosario de Siglas" |
                      día_fecha==resumen |
-                     mes==resumen)) %>%
+                     (!is.na(mes) & mes==resumen))) %>%
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
-                                  día_fecha) #,
-               # mm = ifelse(mm!=which(meses %in% mes) & !is.na(mes),
-               #             which(meses %in% mes),
-               #             mm)
-               ) %>% 
+                                  día_fecha),
+               mm = ifelse(mm!=which(meses %in% mes) & !is.na(mes),
+                           which(meses %in% mes),
+                           mm)) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)))  
 })
