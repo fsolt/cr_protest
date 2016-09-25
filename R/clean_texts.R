@@ -22,7 +22,7 @@ texts <- text_file_names %>%
 
 # Clean
 días <- c("Domingo", "Lunes", "Martes", "Mi[ée]rcoles", "Jueves", "Viernes", "S[áa]bado") 
-meses <- c("Enero", "Febrero", "Marzo", "Mayo", "Abril", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
+meses <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
 
 clean_text <- function(t) {
     t %>% 
@@ -78,6 +78,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                                 str_extract(resumen, mes_pattern),
                                 NA_character_)) %>% 
         filter(!str_detect(resumen, "^\\s*$")) %>% 
+        left_join(data_frame(mes = meses,
+                             mes_mm = sprintf("%02d", 1:12)), by = "mes") %>% 
         zoo::na.locf() %>% 
         mutate(día_fecha = str_replace(día_fecha, "^\\s*", "")) %>% 
         filter(!(is.na(día_fecha) |
@@ -86,10 +88,7 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                      (!is.na(mes) & mes==resumen))) %>%
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
-                                  día_fecha),
-               mm = ifelse(mm!=which(meses %in% mes) & !is.na(mes),
-                           which(meses %in% mes),
-                           mm)) %>% 
+                                  día_fecha)) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)))  
 })
