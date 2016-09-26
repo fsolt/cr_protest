@@ -77,7 +77,7 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                    mes = ifelse(str_detect(resumen, mes_pattern),
                                 str_extract(resumen, mes_pattern),
                                 NA_character_)) %>% 
-        filter(!str_detect(resumen, "^\\s*$")) %>% 
+        filter(!(str_detect(resumen, "^\\s*$"))) %>% 
         left_join(data_frame(mes = meses,
                              mes_mm = sprintf("%02d", 1:12)), by = "mes") %>% 
         zoo::na.locf() %>% 
@@ -86,7 +86,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         filter(!(is.na(día_fecha) |
                      día_fecha=="Glosario de Siglas" |
                      día_fecha==resumen |
-                     (!is.na(mes) & mes==resumen))) %>%
+                     (!is.na(mes) & mes==resumen) |
+                     str_detect(resumen, "^!"))) %>%
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
                                   día_fecha)) %>% 
