@@ -55,5 +55,65 @@ prot <- prot0 %>%
     filter(prot_entry==1) %>% 
     select(-prot_entry)
 
+prot4 <- cleaned_texts %>% 
+    filter(file=="2011_04.txt") %>% 
+    mutate(mass = if_else(str_detect(resumen, "(?<!no )bloque\\B") &
+                              !str_detect(resumen, "[Aa]menaz"),
+                          true = 1,
+                          false = 0),
+           mass = if_else(str_detect(resumen, "se concentra|[Cc]on una (concentración)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "((realizan?|inician?) una?|(declaran?|mantienen?) en|[Cc]on una?) (paro|huelga)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "mantienen? (ocupando|cerrado)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "realizan? (el|la|una?) (manifestación|marcha|paro|huelga)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "[Ll]uego de la manifestación"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "protestan? (frente|antes|en las afueras)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "manifestación convocada días atrás"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "marchan?\\b"),
+                          true = 1,
+                          false = mass))
 
+prot5 <- cleaned_texts %>% 
+    filter(file=="2012_05.txt") %>% 
+    mutate(mass = if_else(str_detect(resumen, "(?<!no )bloque\\B") &
+                              !str_detect(resumen, "[Aa]menaz"),
+                          true = 1,
+                          false = 0),
+           mass = if_else(str_detect(resumen, "se concentra|[Cc]on una (concentración)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "((realizan?|inician?) una?|(declaran?|mantienen?) en|[Cc]on una?) (paro|huelga)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "mantienen? (ocupando|cerrado)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "realizan? (el|la|una?) (manifestación|marcha|paro|huelga)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "[Ll]uego de la manifestación"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "protestan? (frente|antes|en las afueras)"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "manifestación convocada días atrás"),
+                          true = 1,
+                          false = mass),
+           mass = if_else(str_detect(resumen, "marchan?\\b"),
+                          true = 1,
+                          false = mass))
 
