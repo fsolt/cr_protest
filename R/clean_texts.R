@@ -91,8 +91,9 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                                   "Jueves 13",
                                   día_fecha)) %>% 
         separate(día_fecha, c("día", "dd")) %>%
-        mutate(dd = sprintf("%02d", as.numeric(dd))) %>% 
-        select(file, yyyy, mm, dd, día, resumen)
+        mutate(dd = sprintf("%02d", as.numeric(dd)),
+               mass = NA) %>% 
+        select(file, yyyy, mm, dd, día, resumen, mass) 
 })
 
 
