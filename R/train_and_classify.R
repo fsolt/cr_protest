@@ -1,7 +1,9 @@
 library(tidyverse)
-library(RTextTools)
+library(RTextTools) # Per https://github.com/timjurka/RTextTools/issues/4, run `trace("create_matrix", edit=T)`, go to line 42 and change `Acronym`` to `acronym`
 library(beepr)
 
+
+# Test--------
 set.seed(324)
 prot1 <- sample_n(prot, size=nrow(prot), replace=FALSE)
 
@@ -44,43 +46,51 @@ beep()
 # write.csv(analytics@algorithm_summary, "algorithm_summary.csv")
 # write.csv(analytics@ensemble_summary, "ensemble_summary.csv")
 
-
-
 # save(matrix, file="originalMatrix.Rd")
 # save(models1, file="trainedModels.Rd")
 
 # load("originalMatrix.Rd")
 # load("trainedModels.Rd")
 
-all.texts <- meta$file[meta$country!="Brasil"]
-uncoded <- all.texts[!all.texts %in% coded]
+# Train--------
+
+matrix <- create_matrix(prot1$resumen,
+                        language="spanish",
+                        removeNumbers=TRUE, 
+                        stemWords=FALSE, 
+                        weighting=tm::weightTfIdf)
+#train using all data (no reserved test set)
+container <- create_container(matrix,
+                              prot$mass,
+                              trainSize=1:dim(prot)[1],
+                              virgin=FALSE) 
+models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT"))
+
+
+# Classify---------
 
 ptm <- proc.time()
-dir.create("../Classified", showWarnings = FALSE) # Make Classified directory, if it doesn't already exist
 
-library(doParallel)
-registerDoParallel(cores=8)
 
-c.d <- foreach(i = 1:length(uncoded), .packages='RTextTools') %dopar% {
-    d <- paste0("../Clean_Texts/", uncoded[i], ".txt") %>% 
-        readLines %>% 
-        data.frame(file = uncoded[i], text = ., stringsAsFactors=F)
-    
-    d <- left_join(d, meta)
-    d["protest"] <- NA
-    
-    new_matrix <- create_matrix(cbind(d["text"], d["country"]), language="spanish",
-                                removeNumbers=TRUE, stemWords=FALSE, weighting=tm::weightTfIdf, originalMatrix=matrix)
-    
-    new_container <- create_container(new_matrix, d$protest, testSize=seq(dim(d)[1]), virgin=T)
-    
-    new_results <- classify_models(new_container, models)
-    
-    label <- data.frame(sapply(dplyr::select(new_results, contains("LABEL")), function(j) as.numeric(levels(j))[j]))
-    prob <- dplyr::select(new_results, contains("PROB"))
-    new_results <- cbind(label, prob)
-    new_results$sum <- rowSums(label)
-    d["consensus"] <- as.numeric(new_results$sum>4)
+new_matrix <- create_matrix(cleaned_texts$resumen,
+                            language="spanish",
+                            removeNumbers=TRUE,
+                            stemWords=FALSE,
+                            weighting=tm::weightTfIdf, 
+                            originalMatrix=matrix)
+
+new_container <- create_container(new_matrix,
+                                  cleaned_texts$mass, 
+                                  testSize=seq(dim(cleaned_texts)[1]),
+                                  virgin=TRUE)
+
+new_results <- classify_models(new_container, models)
+
+label <- data.frame(sapply(dplyr::select(new_results, contains("LABEL")), function(j) as.numeric(levels(j))[j]))
+prob <- dplyr::select(new_results, contains("PROB"))
+new_results <- cbind(label, prob)
+new_results$sum <- rowSums(label)
+cleaned_texts["consensus"] <- as.numeric(new_results$sum>=2)
     d$consensus_agree[new_results$sum>4] <- new_results$sum[new_results$sum>4]
     d$consensus_agree[new_results$sum<=4] <- 8-new_results$sum[new_results$sum<=4]
     d
