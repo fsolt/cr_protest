@@ -5,6 +5,12 @@ library(tidyr)
 library(purrr)
 
 # depends on poppler (on Macs, install via Homebrew: `brew install poppler`)
+# plus pcregrep, tesseract (plus dictionaries), imagemagick, parallel, and xpdf
+#   1. Install MacPorts <https://www.macports.org/install.php>
+#   2. In terminal: sudo port install pcre
+#   3. In terminal: sudo port install tesseract
+#       a. sudo port install tesseract-spa
+#   4. In terminal: sudo port install imagemagick
 
 # get PDF reports -------------------
 # find number of last page of reports
@@ -102,3 +108,26 @@ walk(all_reports, function(name) {
     }
 })
 
+# Crud-----------
+# Identify files with problems and use OCR to make text files (two-year-old code)
+# https://ryanfb.github.io/etc/2014/11/13/command_line_ocr_on_mac_os_x.html
+system("cd \"data-raw/texts/\"; for f in *.txt; do echo \"$f\"; pcregrep -c '�' $f;  pcregrep -ci '(m\\s?a\\s?r\\s?t\\s?e\\s?s|l\\s?u\\s?n\\s?e\\s?s|b\\s?a\\s?d\\s?o|feira|\\sos\\s)' $f; done > \"crud.txt\"") # Count lines of garbage characters (and days) in each text file
+crud <- data.frame(matrix(readLines("data-raw/texts/crud.txt"), ncol=3, byrow=T), stringsAsFactors = F) # Read in the counts
+crud[, 2:3] <- lapply(crud[, 2:3], as.numeric) # Reformat count variable as numeric rather than string
+crud <- crud[crud$X2 > 4 | crud$X3 == 0, ] # Files with more than four lines of garbage characters (or no mention of days) have problems and need OCR'd
+
+dir.create("data-raw/files_scanned", showWarnings = FALSE) # Make files_scanned directory if it doesn't already exist
+dir.create("data-raw/texts_bad", showWarnings = FALSE) # Make texts_bad directory if it doesn't already exist
+
+# Move problematic texts from texts directory to texts_bad directory, 
+# copy corresponding PDFs to files_scanned directory and then OCR them, 
+# then move result to texts
+lapply(crud$X1, function(i){
+    ii <- gsub("txt", "pdf", i)
+    system(paste0("mv data-raw/texts/", i, " data-raw/texts_bad; ",
+                  "cp data-raw/files/", ii, " data-raw/files_scanned/", ii, "; ",
+                  "./ocr.sh data-raw/files_scanned/", ii, "; ",
+                  "mv ", i, " data-raw/texts"))
+})
+
+system("mv data-raw/texts/crud.txt data-raw/texts_bad/crud.txt")   # Move file with count of garbage characters out of Texts directory
