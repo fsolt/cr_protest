@@ -5,7 +5,7 @@ library(beepr)
 
 # Test--------
 set.seed(324)
-prot1 <- sample_n(prot, size=nrow(prot), replace=FALSE)
+prot_rnd <- sample_n(prot, size=nrow(prot), replace=FALSE)
 
 
 ptm <- proc.time()
@@ -14,13 +14,13 @@ ptm
 f <- .5
 #frac <- seq(.1, 1, by = .1)
 #analytics_by_size <- map(frac, function(f) {
-    matrix <- create_matrix(prot1$resumen,
+    matrix <- create_matrix(prot_rnd$resumen,
                               language="spanish",
                               removeNumbers=TRUE, 
                               stemWords=FALSE, 
                               weighting=tm::weightTfIdf)
     container <- create_container(matrix, 
-                                  prot1$mass, 
+                                  prot_rnd$mass, 
                                   trainSize=1:round(f*dim(prot1)[1]),
                                   testSize=(round(f*dim(prot1)[1])+1):dim(prot1)[1],
                                   virgin=FALSE)
