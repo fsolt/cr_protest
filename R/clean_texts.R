@@ -43,7 +43,7 @@ clean_text <- function(t) {
         gsub("\\n[^\n]*(Cronolog|OSAL|Osal|IIS)[^\n]*\\n", "\\\n", .) %>% 
         str_replace_all("\\n(\\s*Protesta\\s*)?Social[^\n]*\\n\\s*http://iis.ucr.ac.cr/[^\n]*\\n", "") %>% 
         # Omit line breaks within sentences
-        gsub("([][:alpha:]),;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“«\"$])", "\\1 \\2", .) %>% 
+        gsub("([][:alpha:]),;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“[«\"$])", "\\1 \\2", .) %>% 
         # Omit line breaks at numbers within sentences
         gsub("([[:digit:]])[[:blank:]]*\\n+\\s*([[:lower:]])", "\\1 \\2", .) %>% 
         # Omit line breaks within words
@@ -90,7 +90,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                      str_detect(resumen, "^!"))) %>%
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
-                                  día_fecha)) %>% 
+                                  día_fecha)) %>%
+        mutate(resumen = str_replace(resumen, "ﬁ", "fi")) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)),
                mass = NA) %>% 
