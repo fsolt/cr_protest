@@ -91,7 +91,7 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
                                   día_fecha)) %>%
-        mutate(resumen = str_replace(resumen, "ﬁ", "fi")) %>% 
+        mutate(resumen = str_replace_all(resumen, "ﬁ", "fi")) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)),
                mass = NA) %>% 
