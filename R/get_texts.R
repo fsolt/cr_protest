@@ -39,14 +39,14 @@ mes <- data_frame(
          "Septiembre", "Octubre", "Noviembre", "Diciembre"),
     no = sprintf("%02d", 1:12))
 
-ifelse(is.na(idx <- match(county, pattern)), county, replacement[idx])
-
 report_names <- map(all_pages, function(page) {
     read_html(page) %>%
         html_nodes(".caption h3") %>%
         str_extract("(?<=>)[^<]*")}) %>%
-    unlist() %>% 
-    as_data_frame() %>% 
+    unlist() 
+    
+report_names_short <- report_names %>%
+    as_tibble() %>% 
     separate(value, c("mes", "year"), " ") %>% 
     left_join(mes, by = "mes") %>% 
     unite(name, year, no) %>% 
@@ -57,29 +57,47 @@ report_names <- map(all_pages, function(page) {
 dir.create("data-raw/files", showWarnings = FALSE, recursive = TRUE) 
 
 # download all reports as PDF files
-walk2(report_numbers, report_names, function(number, name) {
+walk2(report_numbers, report_names_short, function(number, name) {
     if (!file.exists(str_c("data-raw/files/", name, ".pdf"))) { # if file doesn't exist
         doc <- str_c("http://www.protestas.iis.ucr.ac.cr/publicaciones/", number) %>%
             read_html() %>% 
-            html_node(":nth-child(6) .col-md-12") %>% 
+            html_node(".embed-responsive-item") %>% # Note to self: get the CSS selector using Firefox Developer Edition's Inspector (find the iframe, get contextual menu, "Copy CSS Selector")
             str_extract('\\/system[^\\"]+') %>% 
             str_c("http://www.protestas.iis.ucr.ac.cr", .) # get the link to it
         download.file(doc, destfile = str_c("data-raw/files/", name, ".pdf")) # and download
     }
 })
 
+# quick-and-dirty backup, for if (when) they recode the page html again
+# pwalk(list(report_numbers, report_names, report_names_short), function(number, name, short_name) {
+#     print(paste(number, name))
+#     if (!file.exists(str_c("data-raw/files/", short_name, ".pdf"))) { # if file doesn't exist
+#         link <- paste0("https://www.protestas.iis.ucr.ac.cr/system/publicacions/archivos/000/000/",
+#                         number,
+#                         "/original/IIS-UCR_Costa_Rica_Cronolog%C3%ADa_",
+#                         name %>% str_replace(" ", "_"),
+#                         ".pdf") # make the link to it
+#         tryCatch(download.file(link, destfile = file.path("data-raw","files", paste0(short_name, ".pdf"))),
+#                                error = function(e) {
+#                                    tryCatch(download.file(link %>% str_replace("%C3%AD", "i"), destfile = file.path("data-raw","files", paste0(short_name, ".pdf"))),
+#                                             error = function(e) {
+#                                                 download.file(link %>% str_replace("Septiembre", "Setiembre"), destfile = file.path("data-raw","files", paste0(short_name, ".pdf")))
+#                                             })
+#                                }) # and download
+#     }
+# })
+
 # get earlier reports
 old_links <- read_html("https://web.archive.org/web/20140612020851/http://www.clacso.org.ar/institucional/1h.php?idioma=esp") %>% 
     html_nodes("#item_11 div .link_osal_inverso") %>%
     html_attr("href")
 
-old <- data_frame(
-    link = old_links,
-    year = str_extract(link, "\\d{4}$"),
-    mes_todo = str_extract(link, "(?<=%20)[\\w-]+(?=%20\\d{4}$)"),
-    mes = str_extract(link, "(?<=%20)\\w+(?=-?\\w*%20\\d{4}$)")) %>% 
+old <- tibble(link = old_links,
+              year = str_extract(link, "\\d{4}$"),
+              mes_todo = str_extract(link, "(?<=\\s)[\\w-]+(?=\\s\\d{4}$)"),
+              mes = str_extract(link, "(?<=\\s)\\w+(?=-?\\w*\\s\\d{4}$)")) %>% 
     left_join(mes, by = "mes") %>% 
-    mutate(name = str_c(year, "_", no))
+    mutate(name = paste0(year, "_", no))
 
 old_names <- old$name
 
