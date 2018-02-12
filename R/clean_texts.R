@@ -98,11 +98,12 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         select(file, yyyy, mm, dd, día, resumen, mass) 
 })
 
+save(cleaned_texts, file = "data/cleaned_texts.rda")
 
 # geography
 cantons <- "https://en.wikipedia.org/wiki/Cantons_of_Costa_Rica" %>%
     read_html() %>%
-    html_nodes(xpath = '//*[@id="mw-content-text"]/table[2]') %>%
+    html_nodes('.wikitable') %>%
     html_table() %>%
     first()
 
