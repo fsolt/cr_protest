@@ -3,4 +3,7 @@
 .RData
 .Ruserdata
 data-raw/files/*
+data-raw/files_scanned/
 data-raw/pdfbox-texts.zip
+data-raw/texts_bad/
+sources/
