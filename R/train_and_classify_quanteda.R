@@ -3,7 +3,8 @@ library(quanteda)
 
 
 set.seed(324)
-iis_rnd <- sample_n(iis, size=nrow(iis), replace=FALSE) # randomize order
+iis_rnd <- hand_checked2 %>% 
+    sample_n(., size=nrow(.), replace=FALSE) # randomize order
 
 iis_train <- iis_rnd %>% 
     filter(row_number() <= floor(.8*nrow(iis_rnd)))
@@ -32,7 +33,7 @@ iis_dfm <- tokens(iis_corpus,
     dfm_trim(min_count = 2, min_docfreq = 2)
 
 iis_dfm_train <- iis_dfm[1:nrow(iis_train), ]
-iis_dfm_test<- iis_dfm[(nrow(iis_train)+1):nrow(iis), ] 
+iis_dfm_test<- iis_dfm[(nrow(iis_train)+1):nrow(iis_rnd), ] 
 
 nb_classifier <- textmodel_nb(x = iis_dfm_train, 
                               y = iis_dfm_train@docvars$docvar1,
