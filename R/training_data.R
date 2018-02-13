@@ -8,6 +8,12 @@ if (!file.exists("data-raw/protestas.csv")) {
     write_csv(prot, "data-raw/protestas.csv")
 }
 
+# Nicaragua file
+if (!file.exists("data-raw/protestas_nicaragua.csv")) {
+    prot_nic <- read_csv("https://www.protestas.iis.ucr.ac.cr/protestas.csv?search%5Bpais%5D=nicaragua")
+    write_csv(prot_nic, "data-raw/protestas_nicaragua.csv")
+}
+
 # reformat variable names
 iis0 <- read_csv("data-raw/protestas.csv")
 names(iis0) <- names(iis0) %>%
@@ -32,40 +38,6 @@ iis <- iis0 %>%
            sub_tipo_de_protesta = if_else(is.na(sub_tipo_de_protesta),
                                           "ninguno", 
                                           sub_tipo_de_protesta)) %>% 
-    mutate(mass2 = if_else(str_detect(resumen, "((?<!no )bloque\\B)|(cierre de calles)|tortuguismo") &
-                              !str_detect(resumen, "[Aa]menaz|[Aa]nuncian?\\b"),
-                          true = 1,
-                          false = 0),
-           mass2 = if_else(str_detect(resumen, "(se concentran?)|([Cc]on una) concentración"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "((realizan?|inician?) una?|(declaran?|encuentran?) en|[Cc]on una?|(La|El)|este día se espera el|mantienen? (el|la|en)|cumple el \\b.*\\b día de) (paro|huelga)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "(el paro (de labores )?realizado)|(paralizan? sus labores)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|(impiden? el acceso)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?) (el|la|una?) (manifestación|marcha|paro|huelga|actividad pública)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "(([Ll]uego de la)|([Cc]on una)|(realizan?)( una?)?) (manifestación|mitin|caravana)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "(protestan?|manifiestan?|suspender las protestas) (frente|antes|en las afueras|en las calles|durante la visita)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "realización de una manifestación|manifestación convocada días atrás|se presentan? (en las oficinas|al edificio|a la Asamblea Legislativa)"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "marchan?\\b|toman? las calles"),
-                          true = 1,
-                          false = mass2),
-           mass2 = if_else(str_detect(resumen, "cierran? (el portón|los portones)"),
-                          true = 1,
-                          false = mass2)) %>% 
     group_by(resumen) %>% 
     mutate(mass = max(mass),
            prot_entry = row_number(resumen)) %>% 
