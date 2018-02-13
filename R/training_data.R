@@ -14,37 +14,44 @@ if (!file.exists("data-raw/protestas_nicaragua.csv")) {
     write_csv(prot_nic, "data-raw/protestas_nicaragua.csv")
 }
 
-# reformat variable names
-iis0 <- read_csv("data-raw/protestas.csv")
-names(iis0) <- names(iis0) %>%
-    tolower() %>% 
-    make.names() %>% 
-    str_replace_all("\\.", "_")
 
-# identify mass protests
-mass_protests <- c("Actos sobre la propiedad",
-                   "Bloqueo",
-                   "Huelga",
-                   "Huelga de hambre",
-                   "Marcha",
-                   "Mitin o concentración",
-                   "Paro",
-                   "Toma de propiedad")
+format_iis_dataset <- function(filepath) {
+    mass_protests <- c("Actos sobre la propiedad",
+                       "Bloqueo",
+                       "Huelga",
+                       "Huelga de hambre",
+                       "Marcha",
+                       "Mitin o concentración",
+                       "Paro",
+                       "Toma de propiedad")
+    
+    iis0 <- read_csv(filepath)
+    names(iis0) <- names(iis0) %>%
+        tolower() %>% 
+        make.names() %>% 
+        str_replace_all("\\.", "_")
+    
+    iis <- iis0 %>%
+        mutate(mass = as.numeric(tipo_de_protesta %in% mass_protests),
+               sub_tipo_de_protesta = if_else(is.na(sub_tipo_de_protesta),
+                                              "ninguno", 
+                                              sub_tipo_de_protesta)) %>% 
+        group_by(resumen) %>% 
+        mutate(mass = max(mass),
+               prot_entry = row_number(resumen)) %>% 
+        ungroup() %>% 
+        filter(prot_entry==1) %>% 
+        select(-prot_entry)
+    
+    return(iis)
+}
 
-iis <- iis0 %>%
-    mutate(mass = if_else(tipo_de_protesta %in% mass_protests, 
-                          true = 1,
-                          false = 0),
-           sub_tipo_de_protesta = if_else(is.na(sub_tipo_de_protesta),
-                                          "ninguno", 
-                                          sub_tipo_de_protesta)) %>% 
-    group_by(resumen) %>% 
-    mutate(mass = max(mass),
-           prot_entry = row_number(resumen)) %>% 
-    ungroup() %>% 
-    filter(prot_entry==1) %>% 
-    select(-prot_entry)
+iis <- format_iis_dataset("data-raw/protestas.csv")
+iis_nic <- format_iis_dataset("data-raw/protestas_nicaragua.csv")
 
+
+
+load("data/cleaned_texts.rda")
 hand_checked <- c("2008_01.txt", 
                   "2009_02.txt", 
                   "2010_03.txt",
@@ -92,8 +99,6 @@ hand_checked <- c("2008_01.txt",
                                   false = mass))
     })
 
-hand_checked2 <- list(iis, hand_checked) %>% 
-    map_df(function(df) {
-        df %>% 
-            select(resumen, mass)
-    })
+hand_checked2 <- iis %>% 
+    select(resumen, mass) %>% 
+    bind_rows(hand_checked)
