@@ -56,8 +56,7 @@ hand_checked <- c("2008_01.txt",
                   "2010_03.txt",
                   "2011_04.txt",
                   "2012_05.txt",
-                  "2013_06.txt",
-                  "2014_07.txt") %>% 
+                  "2013_06.txt") %>% 
     map_df(function(m) {
         cleaned_texts %>% 
             filter(file==m) %>% 
