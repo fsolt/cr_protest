@@ -1,5 +1,4 @@
 library(tidyverse)
-library(stringr)
 library(rvest)
 
 # get training file --------
@@ -14,7 +13,6 @@ if (!file.exists("data-raw/protestas_nicaragua.csv")) {
     write_csv(prot_nic, "data-raw/protestas_nicaragua.csv")
 }
 
-
 format_iis_dataset <- function(filepath) {
     mass_protests <- c("Actos sobre la propiedad",
                        "Bloqueo",
@@ -25,7 +23,10 @@ format_iis_dataset <- function(filepath) {
                        "Paro",
                        "Toma de propiedad")
     
-    iis0 <- read_csv(filepath)
+    iis0 <- read_csv(filepath, 
+                     col_types = cols(.default = col_character(),
+                                     ID = col_integer(),
+                                     Fecha = col_date(format = "")))
     names(iis0) <- names(iis0) %>%
         tolower() %>% 
         make.names() %>% 
@@ -48,8 +49,6 @@ format_iis_dataset <- function(filepath) {
 
 iis <- format_iis_dataset("data-raw/protestas.csv")
 iis_nic <- format_iis_dataset("data-raw/protestas_nicaragua.csv")
-
-
 
 load("data/cleaned_texts.rda")
 hand_checked <- c("2008_01.txt", 
@@ -99,6 +98,11 @@ hand_checked <- c("2008_01.txt",
                                   false = mass))
     })
 
-hand_checked2 <- iis %>% 
+all_coded_cr <- iis %>% 
+    select(resumen, mass) %>% 
+    bind_rows(hand_checked)
+
+all_coded <- iis %>% 
+    bind_rows(iis_nic) %>% # add IIS Nicaragua observations
     select(resumen, mass) %>% 
     bind_rows(hand_checked)
