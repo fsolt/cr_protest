@@ -102,7 +102,6 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                mm = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
         select(-n) %>% 
         filter(str_count(resumen, "\\S+") >= 10)
-    
 })
 
 save(cleaned_texts, file = "data/cleaned_texts.rda")
