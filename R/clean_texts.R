@@ -1,5 +1,4 @@
 library(tidyverse)
-library(stringr)
 
 # Load text files--------
 dir.create("data-raw/texts_clean", showWarnings = FALSE) # Make texts_clean directory if it doesn't already exist
@@ -95,7 +94,10 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)),
                mass = NA) %>% 
-        select(file, yyyy, mm, dd, día, resumen, mass) 
+        select(file, yyyy, mm, dd, día, resumen, mass) %>% 
+        group_by(file) %>% 
+        mutate(n = row_number(),
+               mm1 = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm))
 })
 
 save(cleaned_texts, file = "data/cleaned_texts.rda")
