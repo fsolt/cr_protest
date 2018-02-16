@@ -43,8 +43,10 @@ clean_text <- function(t) {
         str_replace_all("\\n(\\s*Protesta\\s*)?Social[^\n]*\\n\\s*http://iis.ucr.ac.cr/[^\n]*\\n", "") %>% 
         # Omit line breaks within sentences
         gsub("([][:alpha:]),;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“[«\"$])", "\\1 \\2", .) %>% 
-        # Omit line breaks at numbers within sentences
-        gsub("([[:digit:]])[[:blank:]]*\\n+\\s*([[:lower:]])", "\\1 \\2", .) %>% 
+        # Omit line breaks after numbers within sentences
+        gsub("([[:digit:]])[[:blank:]]*\\n+\\s*([[:lower:]])", "\\1 \\2", .) %>%
+        # Omit line breaks before numbers within sentences
+        gsub("\\.\\n+([[:digit:]]*)[[:blank:]]*\\s*([[:lower:]])", ". \\1 \\2", .) %>%
         # Omit line breaks within words
         gsub("([[:alpha:][:digit:]])\\s*\\-\\s*\\n\\s*([[:alpha:][:digit:]])", "\\1\\2", .) %>% 
         # Re-split month-day-date lines     
@@ -98,7 +100,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         group_by(file) %>% 
         mutate(n = row_number(),
                mm = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
-        select(-n)
+        select(-n) %>% 
+        filter(str_count(resumen, "\\S+") >= 10)
 })
 
 save(cleaned_texts, file = "data/cleaned_texts.rda")
