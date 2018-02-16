@@ -97,24 +97,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         select(file, yyyy, mm, dd, día, resumen, mass) %>% 
         group_by(file) %>% 
         mutate(n = row_number(),
-               mm1 = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm))
+               mm = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
+        select(-n)
 })
 
 save(cleaned_texts, file = "data/cleaned_texts.rda")
-
-# geography
-cantons <- "https://en.wikipedia.org/wiki/Cantons_of_Costa_Rica" %>%
-    read_html() %>%
-    html_nodes('.wikitable') %>%
-    html_table() %>%
-    first()
-
-names(cantons) <- c("cantón", "provincia",
-                    "pop11", "pop00", "pop_change",
-                    "area", "pop_density", "incorporation")
-matches <- rep("\\1", length(cantons$cantón))
-names(matches) <- str_c(".*(", cantons$cantón, ").*")
-
-# 
-# no_geo <- no_geo %>% mutate(cant = str_replace_all(resumen, matches),
-#                             cant = ifelse(cant!=resumen, cant, NA_character_))
