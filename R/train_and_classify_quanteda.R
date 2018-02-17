@@ -1,9 +1,12 @@
 library(tidyverse)
 library(quanteda)
 
+load("data/training_data.rda")
+
 # create quanteda corpus of IIS data
 set.seed(324)
-iis_rnd <- iis %>% select(resumen, mass) %>% 
+iis_rnd <- iis %>% 
+    select(resumen, mass) %>% 
     sample_n(., size=nrow(.), replace=FALSE) # randomize order
 
 iis_corpus <- corpus(iis_rnd$resumen %>% tolower()) # create quanteda corpus
@@ -83,4 +86,6 @@ table(predicted = pred$nb.predicted, actual = all_cr_dfm_test@docvars$docvar1) #
 mean(pred$nb.predicted == all_cr_dfm_test@docvars$docvar1)*100
 
 hand_checked$pred <- pred$nb.predicted
+
+
 

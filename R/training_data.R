@@ -60,3 +60,5 @@ all_coded <- iis %>%
     bind_rows(iis_nic) %>% # add IIS Nicaragua observations
     select(resumen, mass) %>% 
     bind_rows(hand_checked)
+
+save(iis, iis_nic, hand_checked, all_coded_cr, all_coded, file = "data/training_data.rda")
