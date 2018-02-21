@@ -5,34 +5,51 @@ library(beepr)
 
 # Test--------
 set.seed(324)
-prot_rnd <- sample_n(prot, size=nrow(prot), replace=FALSE)
+prot_rnd <- sample_n(hand_checked2, size=nrow(hand_checked2), replace=FALSE)
 
 
 ptm <- proc.time()
 ptm
 
-f <- .5
+resort_dtm <- function(working.dtm) { # via https://groups.google.com/forum/#!topic/rtexttools-help/VILrGoRpRrU
+    # sorts a sparse matrix in triplet format (i,j,v) first by i, then by j.
+    # Args:
+    #   working.dtm: a sparse matrix in i,j,v format using $i $j and $v respectively. Any other variables that may exist in the sparse matrix are not operated on, and will be returned as-is.
+    # Returns:
+    #   A sparse matrix sorted by i, then by j.
+    working.df <- data.frame(i = working.dtm$i, j = working.dtm$j, v = working.dtm$v)  # create a data frame comprised of i,j,v values from the sparse matrix passed in.
+    working.df <- working.df[order(working.df$i, working.df$j), ] # sort the data frame first by i, then by j.
+    working.dtm$i <- working.df$i  # reassign the sparse matrix' i values with the i values from the sorted data frame.
+    working.dtm$j <- working.df$j  # ditto for j values.
+    working.dtm$v <- working.df$v  # ditto for v values.
+    return(working.dtm) # pass back the (now sorted) data frame.
+}  # end function
+
+
+f <- .9
 #frac <- seq(.1, 1, by = .1)
 #analytics_by_size <- map(frac, function(f) {
     matrix <- create_matrix(prot_rnd$resumen,
                               language="spanish",
                               removeNumbers=TRUE, 
                               stemWords=FALSE, 
-                              weighting=tm::weightTfIdf)
+                              weighting=tm::weightTfIdf) %>% 
+        resort_dtm()
     container <- create_container(matrix, 
                                   prot_rnd$mass, 
-                                  trainSize=1:round(f*dim(prot1)[1]),
-                                  testSize=(round(f*dim(prot1)[1])+1):dim(prot1)[1],
+                                  trainSize=1:round(f*dim(prot_rnd)[1]),
+                                  testSize=(round(f*dim(prot_rnd)[1])+1):dim(prot_rnd)[1],
                                   virgin=FALSE)
     #container <- create_container(matrix, data$protest, trainSize=1:dim(data)[1], virgin=FALSE) #train using all data (no reserved test set)
-    #models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT", "SLDA", "BOOSTING", "BAGGING", "RF", "TREE")) #Also NNET
-    models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT"))
+    models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT", "SLDA", "BOOSTING", "BAGGING", "RF", "TREE")) #Also NNET
+    #models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT", "SLDA"))
     results <- classify_models(container, models)
     analytics <- create_analytics(container, results)
     summary(analytics)
 #})
+    
 
-tested <- prot1[(round(f*dim(prot1)[1])+1):dim(prot1)[1], ] %>% 
+tested <- prot_rnd[(round(f*dim(prot_rnd)[1])+1):dim(prot_rnd)[1], ] %>% 
     cbind(analytics@document_summary)
 
 fp <- tested %>% filter(CONSENSUS_CODE==1 & mass==0)
@@ -54,15 +71,15 @@ beep()
 
 # Train--------
 
-matrix <- create_matrix(prot1$resumen,
+matrix <- create_matrix(hand_checked2$resumen,
                         language="spanish",
                         removeNumbers=TRUE, 
                         stemWords=FALSE, 
                         weighting=tm::weightTfIdf)
 #train using all data (no reserved test set)
 container <- create_container(matrix,
-                              prot$mass,
-                              trainSize=1:dim(prot)[1],
+                              hand_checked2$mass,
+                              trainSize=1:dim(prot1)[1],
                               virgin=FALSE) 
 models <- train_models(container, algorithms=c("SVM", "GLMNET", "MAXENT"))
 
@@ -91,6 +108,8 @@ prob <- dplyr::select(new_results, contains("PROB"))
 new_results <- cbind(label, prob)
 new_results$sum <- rowSums(label)
 cleaned_texts["consensus"] <- as.numeric(new_results$sum>=2)
+
+
     d$consensus_agree[new_results$sum>4] <- new_results$sum[new_results$sum>4]
     d$consensus_agree[new_results$sum<=4] <- 8-new_results$sum[new_results$sum<=4]
     d
