@@ -1,7 +1,9 @@
 library(tidyverse)
-library(quanteda)
 library(glmnet)
 library(e1071)
+library(maxent)
+library(randomForest)
+library(quanteda)
 
 load("data/training_data.rda")
 
@@ -73,19 +75,30 @@ k_fold_classified <- map_dfr(1:k, function(i) {
         attr("probabilities") %>% 
         as_tibble() %>% 
         transmute(svm_pred = `1`)
-
+    
+    # Maximum entropy, via maxent
+    maxent_classifier <- maxent(iis_dfm_train,
+                                iis_dfm_train@docvars$docvar1)
+    
+    pred_maxent <- predict(maxent_classifier, 
+                           feature_matrix = iis_dfm_test) %>% 
+        as_tibble() %>% 
+        transmute(maxent_pred = as.numeric(`1`))
+    
     results_i <- tibble(mass = iis_dfm_test@docvars$docvar1,
                         fold = i,
                         pred_nb = pred_nb$nb_pred,
                         pred_glmnet = pred_glmnet$glmnet_pred,
-                        pred_svm = pred_svm$svm_pred)
+                        pred_svm = pred_svm$svm_pred,
+                        pred_maxent = pred_maxent$maxent_pred)
     
     return(results_i)
 }) %>% 
     mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
-    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2),
+    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm + pred_maxent) >= 2),
            correct_ensemble = as.numeric(mass==pred_ensemble))
 
+save(k_fold_classified, file = "data/k_fold_classified.rda")
 
 # Train on IIS data, test on FS hand-coded sample
 
