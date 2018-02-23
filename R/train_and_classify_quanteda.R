@@ -28,61 +28,64 @@ iis_dfm <- tokens(iis_corpus,
 k <- 10
 folds <- cut(seq(1, nrow(iis_rnd)), breaks = k, labels = FALSE)
 
-correctly_predicted_nb <- vector("double", k)
-correctly_predicted_glmnet <- vector("double", k)
-correctly_predicted_svm <- vector("double", k)
+dichotomize <- function(x) as.numeric(x > .5)
 
-for (i in 1:k) {
+k_fold_classified <- map_dfr(1:k, function(i) {
     test_rows <- which(folds == i)
     iis_dfm_test <- iis_dfm[test_rows, ] 
     iis_dfm_train <- iis_dfm[-test_rows, ]
     
+    # Naive Bayes, via quanteda
     nb_classifier <- textmodel_nb(x = iis_dfm_train, 
                                   y = iis_dfm_train@docvars$docvar1,
-                                  prior = "docfreq",
+                                  prior = "uniform",
                                   distribution = "Bernoulli")
     
+    pred_nb <- predict(nb_classifier, iis_dfm_test) %>% 
+        nth(2) %>% # posterior.prob
+        as_tibble() %>% 
+        transmute(nb_pred = `1`)
+
+    # Lasso, via glmnet
     glmnet_classifier <- glmnet(x = iis_dfm_train, 
                                 y = iis_dfm_train@docvars$docvar1,
                                 family = "binomial")
     
-    svm_classifier <- svm(x = iis_dfm_train, 
-                             y = iis_dfm_train@docvars$docvar1,
-                             type = "C-classification",
-                             cross = 0, cost = 100, kernel = "radial",
-                             probability = TRUE)
-    
-    # nb_coefs <- coef(nb_classifier) %>% 
-    #     as_tibble(rownames = "ngram") %>% 
-    #     arrange(-`1`)
-    
-    pred_nb <- predict(nb_classifier, iis_dfm_test)
     pred_glmnet <- predict(glmnet_classifier, 
                            newx = iis_dfm_test, 
                            type = "response",
                            s = .01) %>% 
         as_tibble() %>% 
-        transmute(glmnet_pred = if_else(`1` > .5, 1, 0))
+        transmute(glmnet_pred = `1`)
+
+    # Support vector machine, via e1071
+    svm_classifier <- svm(x = iis_dfm_train, 
+                          y = iis_dfm_train@docvars$docvar1,
+                          type = "C-classification",
+                          cross = 0, 
+                          cost = 100, 
+                          kernel = "radial",
+                          probability = TRUE)
+
     pred_svm <- predict(svm_classifier, 
                         newdata = iis_dfm_test, 
                         probability = TRUE) %>% 
+        attr("probabilities") %>% 
         as_tibble() %>% 
-        transmute(svm_pred = as.numeric(as.character(value)))
-        
-    if(i == 1) pred_all_nb <- pred_nb$nb.predicted else pred_all_nb <- c(pred_all_nb, pred_nb$nb.predicted)
-    if(i == 1) pred_all_glmnet <- pred_glmnet$glmnet_pred else pred_all_glmnet <- c(pred_all_glmnet, pred_glmnet$glmnet_pred)
-    if(i == 1) pred_all_svm <- pred_svm$svm_pred else pred_all_svm <- c(pred_all_svm, pred_svm$svm_pred)
-    
-    # use pred$nb.predicted to extract the class labels
-    # table(predicted = pred$nb.predicted, actual = iis_test %>% pull("mass")) # confusion matrix
-    correctly_predicted_nb[i] <- mean(pred_nb$nb.predicted == iis_dfm_test@docvars$docvar1)*100
-    correctly_predicted_glmnet[i] <- mean(pred_glmnet$glmnet_pred == iis_dfm_test@docvars$docvar1)*100
-    correctly_predicted_svm[i] <- mean(pred_svm$svm_pred == iis_dfm_test@docvars$docvar1)*100
-}
+        transmute(svm_pred = `1`)
 
-mean(correctly_predicted_nb)
-mean(correctly_predicted_glmnet)
-mean(correctly_predicted_svm)
+    results_i <- tibble(mass = iis_dfm_test@docvars$docvar1,
+                        fold = i,
+                        pred_nb = pred_nb$nb_pred,
+                        pred_glmnet = pred_glmnet$glmnet_pred,
+                        pred_svm = pred_svm$svm_pred)
+    
+    return(results_i)
+}) %>% 
+    mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
+    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2),
+           correct_ensemble = as.numeric(mass==pred_ensemble))
+
 
 # Train on IIS data, test on FS hand-coded sample
 
