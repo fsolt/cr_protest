@@ -9,7 +9,7 @@ load("data/training_data.rda")
 
 # create quanteda corpus of IIS data
 set.seed(324)
-iis_rnd <- iis %>% 
+iis_rnd <- iis_cr %>% 
     select(resumen, mass) %>% 
     sample_n(., size=nrow(.), replace=FALSE) # randomize order
 
@@ -31,6 +31,7 @@ k <- 10
 folds <- cut(seq(1, nrow(iis_rnd)), breaks = k, labels = FALSE)
 
 dichotomize <- function(x) as.numeric(x > .5)
+correct <- function(x) as.numeric(x == k_fold_classified$mass)
 
 k_fold_classified <- map_dfr(1:k, function(i) {
     test_rows <- which(folds == i)
@@ -46,7 +47,7 @@ k_fold_classified <- map_dfr(1:k, function(i) {
     pred_nb <- predict(nb_classifier, iis_dfm_test) %>% 
         nth(2) %>% # posterior.prob
         as_tibble() %>% 
-        transmute(nb_pred = `1`)
+        transmute(pred_nb = `1`)
 
     # Lasso, via glmnet
     glmnet_classifier <- glmnet(x = iis_dfm_train, 
@@ -58,7 +59,7 @@ k_fold_classified <- map_dfr(1:k, function(i) {
                            type = "response",
                            s = .01) %>% 
         as_tibble() %>% 
-        transmute(glmnet_pred = `1`)
+        transmute(pred_glmnet = `1`)
 
     # Support vector machine, via e1071
     svm_classifier <- svm(x = iis_dfm_train, 
@@ -74,7 +75,7 @@ k_fold_classified <- map_dfr(1:k, function(i) {
                         probability = TRUE) %>% 
         attr("probabilities") %>% 
         as_tibble() %>% 
-        transmute(svm_pred = `1`)
+        transmute(pred_svm = `1`)
     
     # Maximum entropy, via maxent
     maxent_classifier <- maxent(iis_dfm_train,
@@ -83,20 +84,34 @@ k_fold_classified <- map_dfr(1:k, function(i) {
     pred_maxent <- predict(maxent_classifier, 
                            feature_matrix = iis_dfm_test) %>% 
         as_tibble() %>% 
-        transmute(maxent_pred = as.numeric(`1`))
+        transmute(pred_maxent = as.numeric(`1`))
     
-    results_i <- tibble(mass = iis_dfm_test@docvars$docvar1,
-                        fold = i,
-                        pred_nb = pred_nb$nb_pred,
-                        pred_glmnet = pred_glmnet$glmnet_pred,
-                        pred_svm = pred_svm$svm_pred,
-                        pred_maxent = pred_maxent$maxent_pred)
+    # Random forests, via randomForest
+    rf_classifier <- randomForest(x = as.matrix(iis_dfm_train),
+                            y = as.factor(iis_dfm_train@docvars$docvar1), 
+                            ntree = 100) 
+    pred_rf <- predict(rf_classifier,
+                       as.matrix(iis_dfm_test),
+                       type = "prob") %>% 
+        as.data.frame() %>% 
+        as_tibble() %>% 
+        transmute(pred_rf = `1`)
+    
+    results_i <- bind_cols(mass = iis_dfm_test@docvars$docvar1,
+                           fold = rep(i, length(iis_dfm_test@docvars$docvar1)),
+                           pred_nb,
+                           pred_glmnet,
+                           pred_svm,
+                           pred_maxent,
+                           pred_rf)
     
     return(results_i)
 }) %>% 
     mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
-    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm + pred_maxent) >= 2),
-           correct_ensemble = as.numeric(mass==pred_ensemble))
+    mutate_at(vars(starts_with("pred_")), funs(correct = correct)) %>% 
+    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm + pred_maxent + pred_rf) >= 3),
+           correct_ensemble = as.numeric(mass==pred_ensemble),
+           correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass))
 
 save(k_fold_classified, file = "data/k_fold_classified.rda")
 
