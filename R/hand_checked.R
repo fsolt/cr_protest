@@ -1,20 +1,20 @@
 load("data/cleaned_texts.rda")
 
-hand_checked <- c("2007_12.txt",
-                  "2008_01.txt",
-                  "2009_02.txt", 
-                  "2010_03.txt",
-                  "2011_04.txt",
-                  "2012_05.txt",
-                  "2013_06.txt",
-                  "2007_07.txt",
-                  "2008_08.txt",
-                  "2009_09.txt",
-                  "2010_10.txt",
-                  "2011_11.txt") %>% 
+hand_checked <- c("2007_12",
+                  "2008_01",
+                  "2009_02", 
+                  "2010_03",
+                  "2011_04",
+                  "2012_05",
+                  "2013_06",
+                  "2007_07",
+                  "2008_08",
+                  "2009_09",
+                  "2010_10",
+                  "2011_11") %>% 
     map_df(function(m) {
         cleaned_texts %>% 
-            filter(file==m) %>% 
+            filter(yyyy_mm == m) %>% 
             mutate(mass = if_else(str_detect(resumen, "((?<!no )bloque\\B)|(cierre de calles)|tortuguismo|(mantienen? un corte de carretera)") &
                                       !str_detect(resumen, "[Aa]menazan?\\b(?! con continuar)|[Aa]nuncian?\\b|protestará|finqueros|terratenientes|(Canoas\\.$)"),
                                   true = 1,
@@ -86,3 +86,78 @@ hand_checked <- c("2007_12.txt",
     })
 
 save(hand_checked, file = "data/hand_checked.rda")
+
+
+try <- c("2012_12.txt")  %>% 
+    map_df(function(m) {
+    cleaned_texts %>% 
+        filter(file=="2012_12.txt") %>% 
+        mutate(mass = if_else(str_detect(resumen, "((?<!no )bloque\\B)|(cierre de calles)|tortuguismo|(mantienen? un corte de carretera)") &
+                                  !str_detect(resumen, "[Aa]menazan?\\b(?! con continuar)|[Aa]nuncian?\\b|protestará|finqueros|terratenientes|(Canoas\\.$)"),
+                              true = 1,
+                              false = 0),
+               mass = if_else(str_detect(resumen, "(se concentran?)|(([Cc]on|realizan?) una concentración)|(concentración realizada)|([Uu]n grupo de .*(protestan?\\b|se han? declarado|manifiestan?))"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(((realizan?|inician?|realización de) una?)|((declaran?\\b|encuentran?\\b)[^\\.]*( (en|una?))?)|([Cc]on una?)|(La|El)|(este día se espera el)|(mantienen? (el|la|en))|([Cc]umplen? (((el )?\\b.*\\b días?)|(((la )?\\b.*\\b semanas?)))( más)? de)|([Cc]ontinúa|[Pp]ersiste|[Mm]ientras) (el|la)) (paro|huelga)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(el paro (de labores )?realizado)|(paralizan?\\b)|(encuentran?( parcialmente)? paralizad)|(continúan sin enviar a sus hijos a clases)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|((permanecen?|continúan?) encadenado)|(impiden? el acceso)|(organizan un .?cordón humano.?)") &
+                                  !str_detect(resumen, "terratenientes"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?|efectúan) (el|la|una?) (manifestación|marcha|paro|huelga|mitin|actividad pública|protesta)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(([Ll]uego de la)|([Cc]on una)|(realizan?)( una?)?) (manifestación|mitin|caravana)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(protestan?|manifiestan?|(suspender las protestas)) ((en )?frente|antes|en las afueras|en las calles|durante|en el campus|mediante caravanas?|contra)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "realización de una manifestación|manifestación convocada días atrás|se presentan? (en las oficinas|al edificio|a la Asamblea Legislativa)"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(?<!(anuncian? la|una))((marchan?\\b)|(toman? las calles))"),
+                              true = 1,
+                              false = mass),
+               mass = if_else(str_detect(resumen, "(cierran? (el portón|los portones))|(toman? las nuevas instalaciones)|(invaden terrenos)|(toman? el edificio)"),
+                              true = 1,
+                              false = mass), 
+               mass = if_else(file == "2010_03.txt" & dd == "17" & str_detect(resumen, "^Estudiantes y personas vinculadas con"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_03.txt" & dd == "24" & str_detect(resumen, "^La Unión Nacional de Porteadores"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2013_06.txt" & dd == "10" & str_detect(resumen, "^En compañía de diputadas y diputados"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2013_06.txt" & dd == "28" & str_detect(resumen, "^Mediante la ANEP, un grupo"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2013_06.txt" & dd == "28" & str_detect(resumen, "^Organizaciones en defensa de los derechos"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_10.txt" & dd == "07" & str_detect(resumen, "^En compañía de diputadas y diputados"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_10.txt" & dd == "20" & str_detect(resumen, "^Luego de que los representantes"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_10.txt" & dd == "25" & str_detect(resumen, "^Las y los vecinos del cantón de El Guarco"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_11.txt" & dd == "22" & str_detect(resumen, "^En el marco del Día Internacional"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_11.txt" & dd == "23" & str_detect(resumen, "^Organizaciones feministas convocan a una marcha"),
+                              true = 0,
+                              false = mass),
+               mass = if_else(file == "2010_11.txt" & dd == "28" & str_detect(resumen, "^Motociclistas, respaldados por la ANEP, anuncian"),
+                              true = 0,
+                              false = mass))
+})
