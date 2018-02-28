@@ -31,9 +31,9 @@ k <- 10
 folds <- cut(seq(1, nrow(iis_rnd)), breaks = k, labels = FALSE)
 
 dichotomize <- function(x) as.numeric(x > .5)
-correct <- function(x) as.numeric(x == k_fold_classified$mass)
+correct <- function(x) as.numeric(x == k_fold_classified0$mass)
 
-k_fold_classified <- map_dfr(1:k, function(i) {
+k_fold_classified0 <- map_dfr(1:k, function(i) {
     test_rows <- which(folds == i)
     iis_dfm_test <- iis_dfm[test_rows, ] 
     iis_dfm_train <- iis_dfm[-test_rows, ]
@@ -97,21 +97,53 @@ k_fold_classified <- map_dfr(1:k, function(i) {
         as_tibble() %>% 
         transmute(pred_rf = `1`)
     
+    # Logit boosting, via caTools
+    lb_classifier <- LogitBoost(xlearn = as.matrix(iis_dfm_train), 
+                            ylearn = iis_dfm_train@docvars$docvar1,
+                            nIter = 100)
+    
+    pred_lb <- predict(lb_classifier,
+                       xtest = data.frame(as.matrix(iis_dfm_test)), 
+                       type = c("raw")) %>% 
+        as_tibble() %>% 
+        transmute(pred_lb = `1`)
+   
+    # Stabilised linear discriminant analysis, via ipred
+    slda_classifier <- slda(as.factor.iis_dfm_train.docvars.docvar1. ~ .,
+                            data = data.frame(as.matrix(iis_dfm_train), 
+                                              as.factor(iis_dfm_train@docvars$docvar1)))
+    
+    pred_slda <- predict(slda_classifier,
+                         newdata = data.frame(as.matrix(iis_dfm_test))) %>% 
+        nth(2) %>% 
+        as_tibble() %>% 
+        transmute(pred_slda = `1`)
+    
     results_i <- bind_cols(mass = iis_dfm_test@docvars$docvar1,
                            fold = rep(i, length(iis_dfm_test@docvars$docvar1)),
                            pred_nb,
                            pred_glmnet,
                            pred_svm,
                            pred_maxent,
-                           pred_rf)
+                           pred_rf,
+                           pred_lb,
+                           pred_slda)
     
     return(results_i)
-}) %>% 
+}) 
+
+k_fold_classified <- k_fold_classified0 %>% 
     mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
-    mutate_at(vars(starts_with("pred_")), funs(correct = correct)) %>% 
-    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm + pred_maxent + pred_rf) >= 3),
+    mutate(pred_ensemble = as.numeric((pred_nb + 
+                                           pred_glmnet +
+                                           pred_svm + 
+                                           pred_maxent + 
+                                           pred_rf +
+                                           pred_lb +
+                                           pred_slda) >= 4),
            correct_ensemble = as.numeric(mass==pred_ensemble),
-           correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass))
+           correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass)) %>% 
+    mutate_at(vars(starts_with("pred_")), funs(correct = correct))
 
 save(k_fold_classified, file = "data/k_fold_classified.rda")
 
@@ -192,23 +224,51 @@ pred_rf <- predict(rf_classifier,
     as_tibble() %>% 
     transmute(pred_rf = `1`)
 
-correct <- function(x) as.numeric(x == split_test$mass)
+# Logit boosting, via caTools
+lb_classifier <- LogitBoost(xlearn = as.matrix(all_cr_dfm_train), 
+                            ylearn = all_cr_dfm_train@docvars$docvar1,
+                            nIter = 100)
+
+pred_lb <- predict(lb_classifier,
+                   xtest = data.frame(as.matrix(all_cr_dfm_test)), 
+                   type = c("raw")) %>% 
+    as_tibble() %>% 
+    transmute(pred_lb = `1`)
+
+# Stabilised linear discriminant analysis, via ipred
+slda_classifier <- slda(as.factor.all_cr_dfm_train.docvars.docvar1. ~ .,
+                        data = data.frame(as.matrix(all_cr_dfm_train), 
+                                          as.factor(all_cr_dfm_train@docvars$docvar1)))
+
+pred_slda <- predict(slda_classifier,
+                     newdata = data.frame(as.matrix(all_cr_dfm_test))) %>% 
+    nth(2) %>% 
+    as_tibble() %>% 
+    transmute(pred_slda = `1`) 
+
+correct <- function(x) as.numeric(x == all_cr_dfm_test@docvars$docvar1)
 
 split_test <- bind_cols(mass = all_cr_dfm_test@docvars$docvar1,
                         pred_nb,
                         pred_glmnet,
                         pred_svm,
                         pred_maxent,
-                        pred_rf) %>% 
+                        pred_rf,
+                        pred_lb,
+                        pred_slda) %>% 
     mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
     mutate_at(vars(starts_with("pred_")), funs(correct = correct)) %>% 
-    mutate(pred_ensemble = as.numeric((pred_nb + pred_glmnet + pred_svm + pred_maxent + pred_rf) >= 3),
+    mutate(pred_ensemble = as.numeric((pred_nb + 
+                                           pred_glmnet +
+                                           pred_svm + 
+                                           pred_maxent + 
+                                           pred_rf +
+                                           pred_lb +
+                                           pred_slda) >= 4),
            correct_ensemble = as.numeric(mass==pred_ensemble),
            correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass))
 
-# use pred$nb.predicted to extract the class labels
-table(predicted = pred$nb.predicted, actual = all_cr_dfm_test@docvars$docvar1) # confusion matrix
-mean(pred$nb.predicted == all_cr_dfm_test@docvars$docvar1)*100
+
 
 
 
