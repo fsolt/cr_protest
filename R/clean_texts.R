@@ -75,33 +75,35 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                    día_fecha = ifelse(str_detect(resumen, día_pattern),
                                       str_extract(resumen, día_pattern),
                                       NA_character_),
-                   mes = ifelse(str_detect(resumen, mes_pattern),
-                                str_extract(resumen, mes_pattern),
+                   mes = ifelse(str_detect(resumen, regex(mes_pattern, ignore_case = TRUE)),
+                                str_extract(resumen, regex(mes_pattern, ignore_case = TRUE)) %>% 
+                                    tolower() %>% 
+                                    str_trim(),
                                 NA_character_)) %>% 
         filter(!(str_detect(resumen, "^\\s*$"))) %>% 
-        left_join(data_frame(mes = meses,
-                             mes_mm = sprintf("%02d", 1:12)), by = "mes") %>% 
-        zoo::na.locf() %>% 
+        left_join(tibble(mes = tolower(meses),
+                         mes_mm = sprintf("%02d", 1:12)), by = "mes") %>% 
+        fill(mes, mes_mm, día_fecha) %>% 
         mutate(mm = ifelse(is.na(mes_mm), mm, mes_mm), 
-               día_fecha = str_replace(día_fecha, "^\\s*", "")) %>%
+               día_fecha = str_trim(día_fecha)) %>%
         filter(!(is.na(día_fecha) |
                      día_fecha=="Glosario de Siglas" |
-                     día_fecha==resumen |
-                     (!is.na(mes) & mes==resumen) |
-                     str_detect(resumen, "^!"))) %>%
+                     día_fecha==str_trim(resumen) |
+                     (!is.na(mes) & mes==tolower(resumen)) |
+                     str_detect(resumen, "^!") |
+                     str_detect(resumen, "^\\s*Social"))) %>%
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
                                   día_fecha)) %>%
         mutate(resumen = str_replace_all(resumen, "ﬁ", "fi")) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)),
-               mass = NA) %>% 
-        select(file, yyyy, mm, dd, día, resumen, mass) %>% 
+               yyyy_mm = paste(yyyy, mm, sep = "_")) %>% 
+        select(file, yyyy, mm, dd, día, resumen, yyyy_mm) %>% 
         group_by(file) %>% 
         mutate(n = row_number(),
-               mm = if_else(n < 5 & dd > 20, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
-        select(-n) %>% 
-        filter(str_count(resumen, "\\S+") >= 10)
+               mm = if_else(n < 3 & dd > 29, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
+        select(-n) 
 })
 
 save(cleaned_texts, file = "data/cleaned_texts.rda")
