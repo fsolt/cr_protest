@@ -3,6 +3,8 @@ library(glmnet)
 library(e1071)
 library(maxent)
 library(randomForest)
+library(caTools)
+library(ipred)
 library(quanteda)
 
 load("data/training_data.rda")
