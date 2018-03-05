@@ -1,4 +1,6 @@
-load("data/cleaned_texts.rda")
+library(tidyverse)
+
+read_csv("data/cleaned_texts.csv")
 
 hand_checked <- c("2006_11", 
                   "2007_12",
@@ -83,10 +85,16 @@ hand_checked <- c("2006_11",
                                   false = mass),
                    mass = if_else(file == "2010_11.txt" & dd == "28" & str_detect(resumen, "^Motociclistas, respaldados por la ANEP, anuncian"),
                                   true = 0,
+                                  false = mass),
+                   mass = if_else(file == "2011_04.txt" & dd == "29" & str_detect(resumen, "^Un grupo de 70 indígenas de las comunidades Bribrí y Kekoldi"),
+                                  true = 0,
+                                  false = mass),
+                   mass = if_else(file == "2011_04.txt" & dd == "29" & str_detect(resumen, "^Tras una participación estimada del 95\\%"),
+                                  true = 0,
                                   false = mass))
     })
 
-save(hand_checked, file = "data/hand_checked.rda")
+write_csv(hand_checked, "data/hand_checked.csv")
 
 
 try <- c("2006_11")  %>% 
