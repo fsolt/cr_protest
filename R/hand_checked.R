@@ -1,6 +1,7 @@
 library(tidyverse)
 
-read_csv("data/cleaned_texts.csv")
+cleaned_texts <- read_csv("data/cleaned_texts.csv",
+                          col_types = "ciccccc")
 
 hand_checked <- c("2006_11", 
                   "2007_12",
@@ -97,7 +98,7 @@ hand_checked <- c("2006_11",
 write_csv(hand_checked, "data/hand_checked.csv")
 
 
-try <- c("2006_11")  %>% 
+try <- c("2005_10")  %>% 
     map_df(function(m) {
     cleaned_texts %>% 
         filter(yyyy_mm == m) %>% 
