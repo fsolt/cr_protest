@@ -1,9 +1,8 @@
 library(tidyverse)
-library(rvest)
 
 # get Costa Rica file --------
 prot_cr <- read_csv("https://www.protestas.iis.ucr.ac.cr/protestas/bd/costa_rica.csv")
-write_csv(prot, "data-raw/protestas_costa_rica.csv")
+write_csv(prot_cr, "data-raw/protestas_costa_rica.csv")
 
 # Nicaragua file
 prot_nic <- read_csv("https://www.protestas.iis.ucr.ac.cr/protestas/bd/nicaragua.csv")
@@ -52,7 +51,7 @@ format_iis_dataset <- function(filepath) {
 iis_cr <- format_iis_dataset("data-raw/protestas_costa_rica.csv")
 iis_nic <- format_iis_dataset("data-raw/protestas_nicaragua.csv")
 
-load("data/hand_checked.rda")
+read_csv("data/hand_checked.csv")
 
 all_coded_cr <- iis_cr %>% 
     select(resumen, mass) %>% 
