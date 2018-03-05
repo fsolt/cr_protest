@@ -8,8 +8,7 @@ all_text_files <- data_frame(file = list.files("data-raw/texts"),
                              month = str_extract(file, "(?<=_)\\d{2}"))
 
 text_file_names <- all_text_files %>% 
-    select(file) %>% 
-    unlist()
+    pull(file)
 
 texts <- text_file_names %>% 
     str_c("data-raw/texts/", .) %>%
@@ -58,7 +57,7 @@ clean_text <- function(t) {
 
 día_pattern <- días %>% 
     str_c(collapse="|") %>% 
-    str_c("^\\s*((",.,")\\s*\\d{1,2})|(Glosario de Siglas)")
+    str_c("(?<=^\\s{0,100}\\w{0,10}\\s{0,100})((",.,")\\s*\\d{1,2})|(Glosario de Siglas)")
 
 mes_pattern <- meses %>% 
     str_c(collapse="|") %>% 
@@ -72,8 +71,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
                    yyyy = str_extract(file, "\\d{4}"),
                    mm = str_extract(file, "(?<=_)\\d{2}"),
                    resumen = .,
-                   día_fecha = ifelse(str_detect(resumen, día_pattern),
-                                      str_extract(resumen, día_pattern),
+                   día_fecha = ifelse(str_detect(resumen, regex(día_pattern, ignore_case = TRUE)),
+                                      str_extract(resumen, regex(día_pattern, ignore_case = TRUE)),
                                       NA_character_),
                    mes = ifelse(str_detect(resumen, regex(mes_pattern, ignore_case = TRUE)),
                                 str_extract(resumen, regex(mes_pattern, ignore_case = TRUE)) %>% 
@@ -95,15 +94,17 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         mutate(día_fecha = ifelse(día_fecha=="Jueves13", 
                                   "Jueves 13",
                                   día_fecha)) %>%
-        mutate(resumen = str_replace_all(resumen, "ﬁ", "fi")) %>% 
+        mutate(resumen = str_replace_all(resumen, "ﬁ", "fi"),
+               resumen = str_replace(resumen, paste0("^\\s*", día_fecha), "")) %>% 
         separate(día_fecha, c("día", "dd")) %>%
         mutate(dd = sprintf("%02d", as.numeric(dd)),
-               yyyy_mm = paste(yyyy, mm, sep = "_")) %>% 
-        select(file, yyyy, mm, dd, día, resumen, yyyy_mm) %>% 
+               día = paste0(toupper(substring(día, 1, 1)), tolower(substring(día, 2)))) %>% 
+        select(file, yyyy, mm, dd, día, resumen) %>% 
         group_by(file) %>% 
         mutate(n = row_number(),
-               mm = if_else(n < 3 & dd > 29, sprintf("%02d", as.numeric(mm) - 1), mm)) %>% 
+               mm = if_else(n < 3 & dd >= 27 & as.numeric(mm) > 1, sprintf("%02d", as.numeric(mm) - 1), mm),
+               yyyy_mm = paste(yyyy, mm, sep = "_")) %>% 
         select(-n) 
 })
 
-save(cleaned_texts, file = "data/cleaned_texts.rda")
+write_csv(cleaned_texts, file = "data/cleaned_texts.csv")
