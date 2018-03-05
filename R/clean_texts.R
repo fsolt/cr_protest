@@ -41,7 +41,7 @@ clean_text <- function(t) {
         gsub("\\n[^\n]*(Cronolog|OSAL|Osal|IIS)[^\n]*\\n", "\\\n", .) %>% 
         str_replace_all("\\n(\\s*Protesta\\s*)?Social[^\n]*\\n\\s*http://iis.ucr.ac.cr/[^\n]*\\n", "") %>% 
         # Omit line breaks within sentences
-        gsub("([][:alpha:]),;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“[«\"$])", "\\1 \\2", .) %>% 
+        gsub("([][:alpha:])–,;:”%&\"])[[:blank:]]*\\n+\\s*([[:alnum:](“[«\"$])", "\\1 \\2", .) %>% 
         # Omit line breaks after numbers within sentences
         gsub("([[:digit:]])[[:blank:]]*\\n+\\s*([[:lower:]])", "\\1 \\2", .) %>%
         # Omit line breaks before numbers within sentences
