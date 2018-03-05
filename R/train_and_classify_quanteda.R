@@ -1,4 +1,3 @@
-library(tidyverse)
 library(glmnet)
 library(e1071)
 library(maxent)
@@ -6,6 +5,7 @@ library(randomForest)
 library(caTools)
 library(ipred)
 library(quanteda)
+library(tidyverse)
 
 load("data/training_data.rda")
 
@@ -259,18 +259,16 @@ split_test <- bind_cols(mass = all_cr_dfm_test@docvars$docvar1,
                         pred_lb,
                         pred_slda) %>% 
     mutate_at(vars(starts_with("pred_")), funs(dichotomize)) %>% 
-    mutate_at(vars(starts_with("pred_")), funs(correct = correct)) %>% 
     mutate(pred_ensemble = as.numeric((pred_nb + 
                                            pred_glmnet +
                                            pred_svm + 
                                            pred_maxent + 
                                            pred_rf +
                                            pred_lb +
-                                           pred_slda) >= 4),
-           correct_ensemble = as.numeric(mass==pred_ensemble),
-           correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass))
+                                           pred_slda) >= 4)) %>% 
+    mutate_at(vars(starts_with("pred_")), funs(correct = correct)) %>% 
+    bind_cols(all_coded_cr[test_rows, ] %>% select(resumen, yyyy_mm), .)
 
-
-
+summary(split_test %>% select(contains("correct")))
 
 
