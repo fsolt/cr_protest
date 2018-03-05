@@ -107,4 +107,4 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         select(-n) 
 })
 
-write_csv(cleaned_texts, file = "data/cleaned_texts.csv")
+write_csv(cleaned_texts, "data/cleaned_texts.csv")
