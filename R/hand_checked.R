@@ -3,7 +3,8 @@ library(tidyverse)
 cleaned_texts <- read_csv("data/cleaned_texts.csv",
                           col_types = "ciccccc")
 
-hand_checked <- c("2006_11", 
+hand_checked <- c("2005_10",
+                  "2006_11", 
                   "2007_12",
                   "2008_01",
                   "2009_02", 
@@ -11,11 +12,15 @@ hand_checked <- c("2006_11",
                   "2011_04",
                   "2012_05",
                   "2013_06",
+                  "2005_05",
+                  "2006_06",
                   "2007_07",
                   "2008_08",
                   "2009_09",
                   "2010_10",
-                  "2011_11") %>% 
+                  "2011_11",
+                  "2012_12", # no file, actually
+                  "2013_01") %>% 
     map_df(function(m) {
         cleaned_texts %>% 
             filter(yyyy_mm == m) %>% 
@@ -32,11 +37,11 @@ hand_checked <- c("2006_11",
                    mass = if_else(str_detect(resumen, "(el paro (de labores )?realizado)|(paralizan?\\b)|(encuentran?( parcialmente)? paralizad)|(continúan sin enviar a sus hijos a clases)"),
                                   true = 1,
                                   false = mass),
-                   mass = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|((permanecen?|continúan?) encadenado)|(impiden? el acceso)|(organizan un .?cordón humano.?)") &
+                   mass = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|((permanecen?|continúan?) encadenado)|(impiden? el acceso)|(organizan un .?cordón humano.?)|(ocupación de estas tierras)") &
                                       !str_detect(resumen, "terratenientes"),
                                   true = 1,
                                   false = mass),
-                   mass = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?|efectúan) (el|la|una?) (manifestación|marcha|paro|huelga|mitin|actividad pública|protesta)"),
+                   mass = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?|efectúan) (el|la|una?) (manifestación|marcha|caminata|paro|huelga|mitin|actividad pública|protesta)"),
                                   true = 1,
                                   false = mass),
                    mass = if_else(str_detect(resumen, "(([Ll]uego de la)|([Cc]on una)|(realizan?)( una?)?) (manifestación|mitin|caravana)"),
@@ -51,9 +56,12 @@ hand_checked <- c("2006_11",
                    mass = if_else(str_detect(resumen, "(?<!(anuncian? la|una))((marchan?\\b)|(toman? las calles))"),
                                   true = 1,
                                   false = mass),
-                   mass = if_else(str_detect(resumen, "(cierran? (el portón|los portones))|(toman? las nuevas instalaciones)|(invaden terrenos)|(toman? el edificio)"),
+                   mass = if_else(str_detect(resumen, "(cierran? (el portón|los portones))|(toman? las nuevas instalaciones)|(invaden terrenos)|(toman? (el edificio|la sede))|(inician? la demolición)"),
                                   true = 1,
                                   false = mass), 
+                   mass = if_else(yyyy_mm == "2005_05" & dd == "15" & str_detect(resumen, "^La vicepresidenta Lineth Saborío advierte"),
+                                  true = 0,
+                                  false = mass),
                    mass = if_else(file == "2010_03.txt" & dd == "17" & str_detect(resumen, "^Estudiantes y personas vinculadas con"),
                                   true = 0,
                                   false = mass),
@@ -98,7 +106,7 @@ hand_checked <- c("2006_11",
 write_csv(hand_checked, "data/hand_checked.csv")
 
 
-try <- c("2005_10")  %>% 
+try <- c("2013_01")  %>% 
     map_df(function(m) {
     cleaned_texts %>% 
         filter(yyyy_mm == m) %>% 
@@ -115,11 +123,11 @@ try <- c("2005_10")  %>%
                mass = if_else(str_detect(resumen, "(el paro (de labores )?realizado)|(paralizan?\\b)|(encuentran?( parcialmente)? paralizad)|(continúan sin enviar a sus hijos a clases)"),
                               true = 1,
                               false = mass),
-               mass = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|((permanecen?|continúan?) encadenado)|(impiden? el acceso)|(organizan un .?cordón humano.?)") &
+               mass = if_else(str_detect(resumen, "(mantienen? (ocupando|cerrado))|(se amarran?\\b)|(se encadenan?\\b)|((permanecen?|continúan?) encadenado)|(impiden? el acceso)|(organizan un .?cordón humano.?)|(ocupación de estas tierras)") &
                                   !str_detect(resumen, "terratenientes"),
                               true = 1,
                               false = mass),
-               mass = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?|efectúan) (el|la|una?) (manifestación|marcha|paro|huelga|mitin|actividad pública|protesta)"),
+               mass = if_else(str_detect(resumen, "([Rr]ealizan?|[Dd]urante|organizan?|efectúan) (el|la|una?) (manifestación|marcha|caminata|paro|huelga|mitin|actividad pública|protesta)"),
                               true = 1,
                               false = mass),
                mass = if_else(str_detect(resumen, "(([Ll]uego de la)|([Cc]on una)|(realizan?)( una?)?) (manifestación|mitin|caravana)"),
@@ -134,7 +142,7 @@ try <- c("2005_10")  %>%
                mass = if_else(str_detect(resumen, "(?<!(anuncian? la|una))((marchan?\\b)|(toman? las calles))"),
                               true = 1,
                               false = mass),
-               mass = if_else(str_detect(resumen, "(cierran? (el portón|los portones))|(toman? las nuevas instalaciones)|(invaden terrenos)|(toman? el edificio)"),
+               mass = if_else(str_detect(resumen, "(cierran? (el portón|los portones))|(toman? las nuevas instalaciones)|(invaden terrenos)|(toman? (el edificio|la sede))|(inician? la demolición)"),
                               true = 1,
                               false = mass))
 })
