@@ -103,7 +103,8 @@ cleaned_texts <- map2_df(texts, text_file_names, function(ts, t_f) {
         group_by(file) %>% 
         mutate(n = row_number(),
                mm = if_else(n < 3 & dd >= 27 & as.numeric(mm) > 1, sprintf("%02d", as.numeric(mm) - 1), mm),
-               yyyy_mm = paste(yyyy, mm, sep = "_")) %>% 
+               yyyy_mm = paste(yyyy, mm, sep = "_")) %>%
+        ungroup() %>% 
         select(-n) 
 })
 
