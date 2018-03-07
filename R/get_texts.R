@@ -87,7 +87,7 @@ walk2(report_numbers, report_names_short, function(number, name) {
 #     }
 # })
 
-# get earlier reports
+# get links to earlier reports from wayback machine, then download from OSAL
 old_links <- read_html("https://web.archive.org/web/20140612020851/http://www.clacso.org.ar/institucional/1h.php?idioma=esp") %>% 
     html_nodes("#item_11 div .link_osal_inverso") %>%
     html_attr("href")
@@ -95,17 +95,17 @@ old_links <- read_html("https://web.archive.org/web/20140612020851/http://www.cl
 old <- tibble(link = old_links,
               year = str_extract(link, "\\d{4}$"),
               mes_todo = str_extract(link, "(?<=\\s)[\\w-]+(?=\\s\\d{4}$)"),
-              mes = str_extract(link, "(?<=\\s)\\w+(?=-?\\w*\\s\\d{4}$)")) %>% 
+              mes = str_extract(link, "(?<=\\s)\\w+(?=-?\\w*\\s\\d{4}$)"),
+              link_osal = str_replace(link, 
+                                      "/web/20140612020851/http:",
+                                      "https:")) %>% 
     left_join(mes, by = "mes") %>% 
     mutate(name = paste0(year, "_", no))
 
-old_names <- old$name
-
-walk2(old_links, old_names, function(link, name) {
+pwalk(old, function(link_osal, name, ...) {
     if (!file.exists(str_c("data-raw/files/", name, ".pdf"))) { # if file doesn't exist
-        doc <- str_c("http://web.archive.org", link) # create full link
         while (!file.exists(str_c("data-raw/files/", name, ".pdf"))) { # until file exists,
-            try(download.file(doc, destfile = str_c("data-raw/files/", name, ".pdf"))) # keep trying to download
+            try(download.file(link_osal, destfile = str_c("data-raw/files/", name, ".pdf"))) # keep trying to download
             Sys.sleep(4)
         }
     }
@@ -115,24 +115,25 @@ walk2(old_links, old_names, function(link, name) {
 # make texts directory, if it doesn't already exist
 dir.create("data-raw/texts", showWarnings = FALSE) 
 
-all_reports <- c(report_names, old_names)
+all_reports <- c(report_names_short, old %>% pull(name))
 
 # extract text from PDFs
 walk(all_reports, function(name) {
     if (!file.exists(str_c("data-raw/texts/", name, ".txt"))) { # if text doesn't exist
-        str_c("pdftotext -layout \"data-raw/files/", 
+        paste0("pdftotext -layout \"data-raw/files/", 
                      name, ".pdf\" \"data-raw/texts/", name,".txt\"") %>% 
             system(ignore.stderr = TRUE)
     }
 })
 
 # Crud-----------
-# Identify files with problems and use OCR to make text files (two-year-old code)
+# Identify files with problems and use OCR to make text files
 # https://ryanfb.github.io/etc/2014/11/13/command_line_ocr_on_mac_os_x.html
 system("cd \"data-raw/texts/\"; for f in *.txt; do echo \"$f\"; pcregrep -c '�' $f;  pcregrep -ci '(m\\s?a\\s?r\\s?t\\s?e\\s?s|l\\s?u\\s?n\\s?e\\s?s|b\\s?a\\s?d\\s?o|feira|\\sos\\s)' $f; done > \"crud.txt\"") # Count lines of garbage characters (and days) in each text file
-crud <- data.frame(matrix(readLines("data-raw/texts/crud.txt"), ncol=3, byrow=T), stringsAsFactors = F) # Read in the counts
-crud[, 2:3] <- lapply(crud[, 2:3], as.numeric) # Reformat count variable as numeric rather than string
-crud <- crud[crud$X2 > 4 | crud$X3 == 0, ] # Files with more than four lines of garbage characters (or no mention of days) have problems and need OCR'd
+crud <- as_tibble(matrix(readLines("data-raw/texts/crud.txt"), ncol=3, byrow=T)) %>%  # Read in the counts
+    mutate(V2 = as.numeric(V2),  # Reformat count variable as numeric rather than string
+           V3 = as.numeric(V3)) %>% # Files with more than four lines of garbage characters (or no mention of days) have problems and need OCR'd
+    filter((V2 > 4 | V3 == 0) & V1 != "crud.txt")
 
 dir.create("data-raw/files_scanned", showWarnings = FALSE) # Make files_scanned directory if it doesn't already exist
 dir.create("data-raw/texts_bad", showWarnings = FALSE) # Make texts_bad directory if it doesn't already exist
@@ -140,12 +141,14 @@ dir.create("data-raw/texts_bad", showWarnings = FALSE) # Make texts_bad director
 # Move problematic texts from texts directory to texts_bad directory, 
 # copy corresponding PDFs to files_scanned directory and then OCR them, 
 # then move result to texts
-lapply(crud$X1, function(i){
+# consider using ocrmypdf here
+
+walk(crud$V1, function(i) {
     ii <- gsub("txt", "pdf", i)
     system(paste0("mv data-raw/texts/", i, " data-raw/texts_bad; ",
                   "cp data-raw/files/", ii, " data-raw/files_scanned/", ii, "; ",
-                  "./ocr.sh data-raw/files_scanned/", ii, "; ",
-                  "mv ", i, " data-raw/texts"))
+                  "./R/ocr.sh data-raw/files_scanned/", ii, "; ",
+                  "mv ", i, " data-raw/texts")) 
 })
 
 system("mv data-raw/texts/crud.txt data-raw/texts_bad/crud.txt")   # Move file with count of garbage characters out of Texts directory
