@@ -51,7 +51,8 @@ format_iis_dataset <- function(filepath) {
 iis_cr <- format_iis_dataset("data-raw/protestas_costa_rica.csv")
 iis_nic <- format_iis_dataset("data-raw/protestas_nicaragua.csv")
 
-read_csv("data/hand_checked.csv")
+hand_checked <- read_csv("data/hand_checked.csv",
+                         col_types = "ciccccci")
 
 all_coded_cr <- iis_cr %>% 
     select(resumen, mass) %>% 
