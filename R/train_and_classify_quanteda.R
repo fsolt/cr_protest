@@ -142,12 +142,10 @@ k_fold_classified <- k_fold_classified0 %>%
                                            pred_maxent + 
                                            pred_rf +
                                            pred_lb +
-                                           pred_slda) >= 4),
-           correct_ensemble = as.numeric(mass==pred_ensemble),
-           correct_ensemble3 = as.numeric(as.numeric((pred_nb + pred_glmnet + pred_svm) >= 2) == mass)) %>% 
+                                           pred_slda) >= 4)) %>% 
     mutate_at(vars(starts_with("pred_")), funs(correct = correct))
 
-save(k_fold_classified, file = "data/k_fold_classified.rda")
+write_csv(k_fold_classified, "data/k_fold_classified.csv")
 
 # Train on IIS data, test on FS hand-coded sample
 
@@ -271,4 +269,4 @@ split_test <- bind_cols(mass = all_cr_dfm_test@docvars$docvar1,
 
 summary(split_test %>% select(contains("correct")))
 
-
+write_csv(split_test, "data/split_test.csv")
